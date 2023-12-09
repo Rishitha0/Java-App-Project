@@ -16,6 +16,7 @@ import {
 } from '../models/AccountModel';
 import { Transactions, TransactionIdParam } from '../types/transaction';
 import { CustomerIdParam, CustomerInfo } from '../types/customerInfo';
+import { parseDatabaseError } from '../utils/db-utils';
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -38,14 +39,31 @@ async function getTransaction(req: Request, res: Response): Promise<void> {
 }
 
 async function getCustomerTransactions(req: Request, res: Response): Promise<void> {
-  const { customerId } = req.params as CustomerIdParam;
-  const customer = await getCustomerById(customerId);
-  if (!customer) {
-    res.sendStatus(404); // Couldn't be found
+  const { authenticatedCustomer, isLoggedIn } = req.session;
+  if (!isLoggedIn) {
+    res.redirect('/login');
     return;
   }
-  const transactions = await getTransactionsByCustomerId(customerId);
-  res.status(201).json(transactions); // replace with render once front-end file is created.
+  if (!authenticatedCustomer) {
+    res.status(401).sendFile(path.join(__dirname, '../../public/html/accessDenied.html'));
+    return;
+  }
+  const { customerId } = authenticatedCustomer;
+  const customer = await getCustomerById(authenticatedCustomer.customerId);
+  if (!customer) {
+    res.status(404).sendFile(path.join(__dirname, '../../public/html/userNotFound.html'));
+    return;
+  }
+
+  const customerTransactions = await getTransactionsByCustomerId(customerId);
+  try {
+    console.log(customerTransactions);
+    res.render('transaction_d', { customer, customerTransactions });
+  } catch (err) {
+    console.error(err);
+    const databaseErrorMessage = parseDatabaseError(err);
+    res.status(500).json(databaseErrorMessage);
+  }
 }
 
 async function getMonthlyRecord(req: Request, res: Response): Promise<void> {
@@ -146,28 +164,35 @@ async function makeTransaction(req: Request, res: Response): Promise<void> {
     otherType = 'Deposit';
     updateAccountByAccountNumber(accountNo, otherAccount);
   }
-  const transaction = await addTransaction(
-    customerId,
-    amount,
-    date,
-    type,
-    bankType,
-    accountNo,
-    otherAccountNo,
-    customer
-  );
-  const otherTransaction = await addTransaction(
-    authenticatedCustomer.customerId,
-    amount,
-    date,
-    otherType,
-    bankType,
-    otherAccountNo,
-    accountNo,
-    otherCustomer
-  );
-  console.log(transaction);
-  console.log(otherTransaction);
+  try {
+    const transaction = await addTransaction(
+      customerId,
+      amount,
+      date,
+      type,
+      bankType,
+      accountNo,
+      otherAccountNo,
+      customer
+    );
+    console.log(transaction);
+    const otherTransaction = await addTransaction(
+      authenticatedCustomer.customerId,
+      amount,
+      date,
+      otherType,
+      bankType,
+      otherAccountNo,
+      accountNo,
+      otherCustomer
+    );
+    console.log(otherTransaction);
+    res.redirect('/transaction/add');
+  } catch (err) {
+    console.error(err);
+    const databaseErrorMessage = parseDatabaseError(err);
+    res.status(500).json(databaseErrorMessage);
+  }
 }
 
 async function renderMakeTransactionPage(req: Request, res: Response): Promise<void> {
