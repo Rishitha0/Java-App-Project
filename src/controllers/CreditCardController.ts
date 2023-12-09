@@ -10,6 +10,7 @@ import {
 import { parseDatabaseError } from '../utils/db-utils';
 import { CreditCard } from '../entities/CreditCard';
 import { getCustomerById } from '../models/CustomerModel';
+import { getAccountsByCustomerId } from '../models/AccountModel';
 // import { CustomerIdParam } from '../types/customerInfo';
 
 const filename = fileURLToPath(import.meta.url);
@@ -39,6 +40,46 @@ async function addNewCreditCard(req: Request, res: Response): Promise<void> {
   }
 }
 
+function calculateNewMinimumPaymentDue(newBalance: number): number {
+  let minimumPaymentDue: number;
+
+  if (newBalance <= 35) {
+    minimumPaymentDue = newBalance;
+  } else if (newBalance <= 500) {
+    minimumPaymentDue = 35;
+  } else if (newBalance > 500 && newBalance < 5000) {
+    minimumPaymentDue = 500;
+  } else {
+    const percentage = 5;
+    minimumPaymentDue = (percentage / 100) * newBalance;
+  }
+
+  return parseFloat(minimumPaymentDue.toFixed(2));
+}
+
+function addOneMonth(date: Date): Date {
+  const newDate = new Date(date);
+  newDate.setMonth(newDate.getMonth() + 1);
+  return newDate;
+}
+
+async function updateCreditCard(creditCard: CreditCard, currentDate: Date): Promise<CreditCard> {
+  if (currentDate > creditCard.closingDate) {
+    const newClosingDate = addOneMonth(creditCard.closingDate);
+    const newPaymentDueDate = addOneMonth(creditCard.paymentDueDate);
+    const newMinimumPaymentDue = calculateNewMinimumPaymentDue(creditCard.currentBalance);
+    const newStatementBalance = creditCard.currentBalance;
+
+    await updateCreditCardByAccountNumber(creditCard.accountNumber, {
+      closingDate: newClosingDate,
+      paymentDueDate: newPaymentDueDate,
+      minimumPaymentDue: newMinimumPaymentDue,
+      statementBalance: newStatementBalance,
+    });
+  }
+  return creditCard;
+}
+
 async function getCreditCard(req: Request, res: Response): Promise<void> {
   if (!req.session.isLoggedIn) {
     res.redirect('/login');
@@ -50,7 +91,6 @@ async function getCreditCard(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // const { customerId } = authenticatedCustomer;
   const customer = await getCustomerById(req.session.authenticatedCustomer.customerId);
   if (!customer) {
     res.status(404).sendFile(path.join(__dirname, '../../public/html/userNotFound.html'));
@@ -60,8 +100,14 @@ async function getCreditCard(req: Request, res: Response): Promise<void> {
   const { accountNumber } = req.params;
 
   try {
-    const creditCard = await getCreditCardByAccountNumber(accountNumber);
-    console.log(creditCard);
+    let creditCard = await getCreditCardByAccountNumber(accountNumber);
+
+    if (!creditCard) {
+      throw new Error('Credit card not found');
+    }
+
+    const currentDate = new Date();
+    creditCard = await updateCreditCard(creditCard, currentDate);
     res.render('creditCard/creditCardDetail', { customer, creditCard });
   } catch (err) {
     console.error(err);
@@ -119,29 +165,6 @@ async function getAllCreditCardByCustomer(req: Request, res: Response): Promise<
   }
 }
 
-function calculateNewMinimumPaymentDue(newBalance: number): number {
-  let minimumPaymentDue: number;
-
-  if (newBalance <= 35) {
-    minimumPaymentDue = newBalance;
-  } else if (newBalance <= 500) {
-    minimumPaymentDue = 35;
-  } else if (newBalance > 500 && newBalance < 5000) {
-    minimumPaymentDue = 500;
-  } else {
-    const percentage = 5;
-    minimumPaymentDue = (percentage / 100) * newBalance;
-  }
-
-  return parseFloat(minimumPaymentDue.toFixed(2));
-}
-
-// function addOneMonth(date: Date): Date {
-//   const newDate = new Date(date);
-//   newDate.setMonth(newDate.getMonth() + 1);
-//   return newDate;
-// }
-
 async function makePayment(req: Request, res: Response): Promise<void> {
   if (!req.session.isLoggedIn) {
     res.redirect('/login');
@@ -153,14 +176,12 @@ async function makePayment(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const { customerId } = authenticatedCustomer;
   const customer = await getCustomerById(req.session.authenticatedCustomer.customerId);
   if (!customer) {
     res.status(404).sendFile(path.join(__dirname, '../../public/html/userNotFound.html'));
     return;
   }
 
-  const allCreditCards = await getCreditCardByCustomerId(customerId);
   const { accountNumber } = req.params;
   const { paymentAmount } = req.body;
 
@@ -180,23 +201,23 @@ async function makePayment(req: Request, res: Response): Promise<void> {
     }
 
     const newBalance = creditCard.currentBalance - paymentAmount;
+    const newAvailableLimit = creditCard.totalLimit - newBalance;
     const currentDate = new Date();
+    let newStatementBalance = creditCard.statementBalance;
     if (currentDate > creditCard.closingDate && creditCard.currentBalance > 0) {
-      creditCard.statementBalance = newBalance;
+      newStatementBalance = creditCard.currentBalance;
     }
-
-    const newStatementBalance = creditCard.statementBalance;
     const newMinimumPaymentDue =
-      paymentAmount > creditCard.minimumPaymentDue ? 0 : calculateNewMinimumPaymentDue(newBalance);
+      paymentAmount > creditCard.minimumPaymentDue
+        ? 0
+        : creditCard.minimumPaymentDue - paymentAmount;
 
     await updateCreditCardByAccountNumber(accountNumber, {
       currentBalance: newBalance,
       statementBalance: newStatementBalance,
       minimumPaymentDue: newMinimumPaymentDue,
+      availableLimit: newAvailableLimit,
     });
-
-    res.render('creditCard/creditCardPage', { customer, allCreditCards });
-    // res.redirect('/creditCard');
   } catch (err) {
     console.error(err);
     const databaseErrorMessage = parseDatabaseError(err);
@@ -221,12 +242,13 @@ async function renderPaymentPage(req: Request, res: Response): Promise<void> {
     return;
   }
 
+  const allAccounts = await getAccountsByCustomerId(customerId);
   const { accountNumber } = req.params;
 
   try {
     const creditCard = await getCreditCardByAccountNumber(accountNumber);
     console.log(creditCard);
-    res.render('creditCard/paymentPage', { customer, creditCard });
+    res.render('creditCard/paymentPage', { customer, creditCard, allAccounts });
   } catch (err) {
     console.error(err);
     const databaseErrorMessage = parseDatabaseError(err);
