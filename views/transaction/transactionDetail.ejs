@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>Transactions</title>
+    <title>Credit Card Detail</title>
 
     <!-- Montserrat Font -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -20,9 +20,6 @@
         background-color: #e6e8ed;
         color: #666666;
         font-family: "Montserrat", sans-serif;
-        display: flex;
-        align-items: center;
-        justify-content: center;
       }
 
       .material-icons-outlined {
@@ -30,17 +27,15 @@
         line-height: 1px;
       }
 
-
       .grid-container {
-  display: grid;
-  grid-template-columns: 260px 1fr 1fr 1fr;
-  grid-template-rows: 0.2fr 3fr;
-  grid-template-areas:
-    'sidebar header header header'
-    'sidebar main main main';
-  height: 100vh;
-}
-
+        display: grid;
+        grid-template-columns: 260px 1fr 1fr 1fr;
+        grid-template-rows: 0.2fr 3fr;
+        grid-template-areas:
+          "sidebar header header header"
+          "sidebar main main main";
+        height: 100vh;
+      }
 
       /* ---------- SIDEBAR ---------- */
 
@@ -93,13 +88,6 @@
         color: #9799ab;
       }
 
-      .sidebar-list-item > i {
-        background-color: rgba(243, 239, 239, 0.989);
-      }
-
-      .sidebar-list-item.credit-card-submenu > a {
-        color: #9799ab;
-      }
 
       .sidebar-responsive {
         display: inline !important;
@@ -114,38 +102,71 @@
 
       }
 
+      /* ---------- MAIN ---------- */
+
+      .main-container {
+        grid-area: main;
+        overflow-y: auto;
+        padding: 20px 20px;
+      }
+
       .main-title {
-        display: flex;
+        align-items: center;
         justify-content: space-between;
+        font-weight: 700;
       }
 
       .main-title > p {
         font-size: 30px;
+        align-items: center ;
       }
 
-      .transactions-box {
-        text-align: center;
+      .account-container {
+        border: 2px solid #e0d4d4;
         padding: 20px;
-        border: 1px solid #ddd;
-        border-radius: 20px;
-        background-color: #fff;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        margin-top: 40px; /* Add margin to separate from the sidebar */
-        width: 400px;
-        margin: 0 auto; /* Center horizontally */
-        height: 70px;
-  }
+        margin: 20px;
+        text-align: center;
+        background-color: rgb(4, 107, 107);
+        color: white;
+        width: 720px;
+        font-weight: 500;
+      }
 
-  .icon {
-    font-size: 40px;
-    margin: 10px;
-    cursor: pointer;
-    color: #3498db;
-  }
+      .account-container a {
+        color: white;
+        text-decoration: none;
+        }
 
-  .icon:hover {
-    color: #2980b9;
-  }
+        .account-container a:hover {
+        background-color: rgba(243, 239, 239, 0.989);
+        }
+
+      /* ---------- MEDIA QUERIES ---------- */
+
+
+      /* Medium <= 992px */
+      @media screen and (max-width: 992px) {
+        .grid-container {
+          grid-template-columns: 1fr;
+          grid-template-rows: 0.2fr 3fr;
+          grid-template-areas:
+            "header"
+            "main";
+        }
+
+        #sidebar {
+          display: none;
+        }
+
+        .menu-icon {
+          display: inline;
+        }
+
+        .sidebar-title > span {
+          display: inline;
+        }
+      }
+
   </style>
   </head>
   <body>
@@ -194,33 +215,28 @@
         </ul>
       </aside>
       <!-- End Sidebar -->
-    </div>
-      <!-- Main -->
 
-      <main class="transactions-box">
-          <div class="header">Make Transactions</div>
-          <div>
-            <a href="transaction_d.ejs">
-            <span class="icon" onclick="sendToDifferentAccounts()">↗</span> Send Money
-            </a>
-          </div>
+      <!-- Main -->
+      <main class="main-container">
+        <div class="main-title">
+          <p class="font-weight-bold">CREDIT CARD DETAILS</p>
+        </div>
+
+        <div class="account-container">
+            <form method="get" action="/creditCard/<%= customer.customerId %>/<%= transaction.transactionId %>/details">
+                <h1><%= transaction.transactionId %></h1>
+                <p>Amount: $<span><%= Number(transaction.amount).toFixed(2) %></span></p>
+                <p>Initiative Account: $<span><%= Number(transaction.accountNo) %></span></p>
+                <p>Recipient Account: $<span><%= Number(transaction.otherAccountNo) %></span></p>
+                <p>Inter/IntraBank: <span><%= transaction.bankType %></span>%</p>
+                <p>Recipient's CustomerId: $<span><%= transaction.customerId  %></span></p>
+                <p>Type: $<span><%= transaction.type %></span></p>
+                <p>Date of Transaction: $<span><%= transaction.date %></span></p>
+                <br>
+              </form>
+      </div>
       </main>
 
-      <script>
-        function transferBetweenAccounts() {
-          // Add logic for transferring between accounts
-          alert("Transfer between accounts clicked");
-        }
-
-        function sendToDifferentAccounts() {
-          // Add logic for sending money to different accounts
-          alert("Send to different accounts clicked");
-        }
-      </script>
-
     </div>
-
-    <!-- ApexCharts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.35.3/apexcharts.min.js"></script>
   </body>
 </html>

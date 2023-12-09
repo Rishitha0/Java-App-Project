@@ -16,6 +16,7 @@ import {
 } from './controllers/AccountController';
 import {
   getCustomerTransactions,
+  getTransaction,
   makeTransaction,
   getMonthlyRecord,
   accumulateInterest,
@@ -117,6 +118,7 @@ app.get('/account/:customerId', getCustomerAccounts);
 app.post('/transaction/add', makeTransaction);
 app.get('/transaction/add', renderMakeTransactionPage);
 app.get('/transaction', getCustomerTransactions);
+app.get('/transaction/:customerId/:transactionId/details', getTransaction);
 app.post('/api/transaction', accumulateInterest);
 app.get('/transaction/:date/:customerId', getMonthlyRecord);
 
