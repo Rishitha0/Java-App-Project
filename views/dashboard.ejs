@@ -145,7 +145,6 @@
 
       .details-container a {
         color: white;
-        margin-bottom: 20px;
       }
 
       .account-container.active .details-container {
@@ -271,7 +270,7 @@
             </h3>
             <p>Current Balance: $<%= Number(creditCard.currentBalance).toFixed(2) %></p>
             <div class="details-container">
-              
+              <a href="/creditCard/<%= customer.customerId %>/<%= creditCard.accountNumber %>/details">View Card Details ></a>
             </div>
             <div class="arrow" style="margin-top: 20px;">&#9660;</div>
           </div>
