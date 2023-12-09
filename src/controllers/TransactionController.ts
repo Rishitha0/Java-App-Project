@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { getCustomerById } from '../models/CustomerModel';
 import {
   addTransaction,
@@ -14,6 +16,9 @@ import {
 } from '../models/AccountModel';
 import { Transactions, TransactionIdParam } from '../types/transaction';
 import { CustomerIdParam, CustomerInfo } from '../types/customerInfo';
+
+const filename = fileURLToPath(import.meta.url);
+const dirname = path.dirname(filename);
 
 async function getTransaction(req: Request, res: Response): Promise<void> {
   const { transactionID } = req.params as TransactionIdParam;
@@ -165,6 +170,26 @@ async function makeTransaction(req: Request, res: Response): Promise<void> {
   console.log(otherTransaction);
 }
 
+async function renderMakeTransactionPage(req: Request, res: Response): Promise<void> {
+  const { authenticatedCustomer } = req.session;
+
+  if (!authenticatedCustomer) {
+    res.status(401).sendFile(path.join(dirname, '../../public/html/accessDenied.html'));
+    return;
+  }
+
+  const { customerId } = authenticatedCustomer;
+
+  const customer = await getCustomerById(customerId);
+
+  if (!customer) {
+    res.status(404).sendFile(path.join(dirname, '../../public/html/userNotFound.html'));
+    return;
+  }
+
+  res.render('transaction/createTransaction', { customer });
+}
+
 async function accumulateInterest(req: Request, res: Response): Promise<void> {
   const { accountNo, customerId } = req.body as Transactions;
   const date = new Date();
@@ -228,4 +253,5 @@ export {
   getCustomerTransactions,
   getMonthlyRecord,
   accumulateInterest,
+  renderMakeTransactionPage,
 };
