@@ -120,7 +120,7 @@ app.get('/transaction/add', renderMakeTransactionPage);
 app.get('/transaction', getCustomerTransactions);
 app.get('/transaction/:customerId/:transactionId/details', getTransaction);
 app.post('/api/transaction', accumulateInterest);
-app.get('/transaction/:date/:customerId', getMonthlyRecord);
+app.get('/history', getMonthlyRecord);
 
 app.listen(PORT, () => {
   console.log(`server listening on http://localhost:${PORT}`);

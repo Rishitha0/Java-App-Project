@@ -25,7 +25,7 @@ async function addAccount(req: Request, res: Response): Promise<void> {
   }
   const customer = await getCustomerById(authenticatedCustomer.customerId);
   if (!customer) {
-    res.sendStatus(404); // no customer;
+    res.status(404).sendFile(path.join(dirname, '../../public/html/userNotFound.html'));
     return;
   }
   try {

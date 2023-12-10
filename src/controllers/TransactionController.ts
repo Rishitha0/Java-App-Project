@@ -155,7 +155,7 @@ async function makeTransaction(req: Request, res: Response): Promise<void> {
   }
   if (type === 'Deposit') {
     if (amount >= otherAccount.currentBalance) {
-      res.sendStatus(403); // can't have negative balance. Turn into redirect later
+      res.status(403).sendFile(path.join(dirname, '../../public/html/transaction_failed.html'));
       return;
     }
     if (account.routingNumber === otherAccount.routingNumber) {
@@ -171,7 +171,7 @@ async function makeTransaction(req: Request, res: Response): Promise<void> {
   }
   if (type === 'Withdrawal') {
     if (amount <= account.currentBalance) {
-      res.sendStatus(403); // can't have negative balance. Turn into redirect later
+      res.status(403).sendFile(path.join(dirname, '../../public/html/transaction_failed.html'));
       return;
     }
     account.currentBalance -= amount;
@@ -202,6 +202,7 @@ async function makeTransaction(req: Request, res: Response): Promise<void> {
       accountNo,
       otherCustomer
     );
+    res.status(201).sendFile(path.join(dirname, '../../public/html/transaction_successful.html'));
     console.log(otherTransaction);
     res.redirect('/transaction/add');
   } catch (err) {
