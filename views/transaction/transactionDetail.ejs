@@ -223,7 +223,7 @@
         </div>
 
         <div class="account-container">
-            <form method="get" action="/creditCard/<%= customer.customerId %>/<%= transaction.transactionId %>/details">
+            <form method="get" action="/transaction/<%= customer.customerId %>/<%= transaction.transactionId %>/details">
                 <h1><%= transaction.transactionId %></h1>
                 <p>Amount: $<span><%= Number(transaction.amount).toFixed(2) %></span></p>
                 <p>Initiative Account: $<span><%= Number(transaction.accountNo) %></span></p>
