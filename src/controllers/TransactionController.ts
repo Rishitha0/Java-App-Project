@@ -102,7 +102,7 @@ async function getMonthlyRecord(req: Request, res: Response): Promise<void> {
       record.push(transactions[i]);
     }
   }
-  res.status(201).json(record); // replace with render once front-end is made.
+  res.render('/history', { record }); // replace with render once front-end is made.
 }
 
 async function makeTransaction(req: Request, res: Response): Promise<void> {
